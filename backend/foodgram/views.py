@@ -24,6 +24,7 @@ NOT_IN_CART = 'Рецепта нет в корзине'
 
 class ListRetrieve(mixins.ListModelMixin, mixins.RetrieveModelMixin,
                    viewsets.GenericViewSet):
+    """Класс для получения списка или одного объекта."""
     pass
 
 

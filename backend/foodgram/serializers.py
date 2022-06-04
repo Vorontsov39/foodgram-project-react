@@ -4,12 +4,12 @@ import uuid
 from django.core.files.base import ContentFile
 from django.shortcuts import get_list_or_404
 from rest_framework import serializers
-from users.serializers import UserSerializer
 
+from users.serializers import UserSerializer
 from .models import Cart, Favorite, Ingredient, Recipe, RecipeIngredient, Tag
 
-INGREDIENS_ERROR = 'Поле ингридиенты обязательно к заполнению'
-NOT_INGRIDIENTS = 'Каждый ингредиент должен содержать поля : id, amount'
+INGREDIENS_KEY_ERROR = 'Поле ingredients обязательно'
+INGREDIENT_NOT_CORRECT = 'Каждый ингредиент должен содержать поля : id, amount'
 INGREDIENT_NOT_FOUND = 'Ингредиент с id = {} не существует'
 SAME_INGREDIENT = 'Ингредиент {} добавлен дважды'
 TAGS_KEY_ERROR = 'Поле tags обязательно'
@@ -20,18 +20,15 @@ CHECK_AMOUNT_FORMAT = 'Ингредиент {}: Введите правильн�
 
 
 class TagSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Tag
-        fields = (
-            'id', 'name', 'color', 'slug',)
+        fields = ('id', 'name', 'color', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Ingredient
-        fields = '__all__'
+        fields = ('id', 'name', 'measurement_unit')
 
 
 class Base64ToFile(serializers.ImageField):
@@ -44,7 +41,7 @@ class Base64ToFile(serializers.ImageField):
             base64.b64decode(datastr), name='{}.{}'.format(uuid.uuid4(), ext))
 
 
-class RecipeIngredientSerializer(serializers.ModelSerializer):
+class IngredientInRecipeSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
@@ -76,7 +73,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         objects = RecipeIngredient.objects.filter(recipe=obj)
-        serializer = RecipeIngredientSerializer(objects, many=True)
+        serializer = IngredientInRecipeSerializer(objects, many=True)
         return serializer.data
 
     def get_is_favorited(self, obj):
@@ -92,22 +89,22 @@ class RecipeSerializer(serializers.ModelSerializer):
     def list_ingredients(self, initial_data):
         ingredients_id = initial_data.pop('ingredients', None)
         if ingredients_id is None:
-            raise serializers.ValidationError(INGREDIENS_ERROR)
+            raise serializers.ValidationError(INGREDIENS_KEY_ERROR)
         ingredients = []
-        ingrs = set()
+        ids = set()
         for ingredient_id in ingredients_id:
             id = ingredient_id.get('id', None)
             amount = ingredient_id.get('amount', None)
             if id is None or amount is None:
-                raise serializers.ValidationError(NOT_INGRIDIENTS)
+                raise serializers.ValidationError(INGREDIENT_NOT_CORRECT)
             ingredient = Ingredient.objects.filter(id=id).first()
             if ingredient is None:
                 raise serializers.ValidationError(
                     INGREDIENT_NOT_FOUND.format(id))
-            if id in ingrs:
+            if id in ids:
                 raise serializers.ValidationError(
                     SAME_INGREDIENT.format(ingredient.name))
-            ingrs.add(id)
+            ids.add(id)
             try:
                 amount = int(amount)
             except ValueError:

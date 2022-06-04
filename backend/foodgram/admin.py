@@ -19,8 +19,8 @@ class RecipeIgredientInline(admin.StackedInline):
 
 class RecipeAdmin(admin.ModelAdmin):
     inlines = (RecipeIgredientInline,)
-    list_display = ('id', 'title', 'author')
-    list_filter = ('title', 'author', 'tags')
+    list_display = ('id', 'name', 'author')
+    list_filter = ('name', 'author', 'tags')
     readonly_fields = ('favorites',)
 
     def favorites(self, obj):

@@ -3,8 +3,8 @@ from enum import Enum
 from django_filters import rest_framework as filter
 from django_filters.filters import (AllValuesMultipleFilter, ModelChoiceFilter,
                                     NumberFilter)
-from users.models import User
 
+from users.models import User
 from .models import Recipe
 
 
