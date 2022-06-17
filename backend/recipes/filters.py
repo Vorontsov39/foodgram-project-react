@@ -1,41 +1,42 @@
-from enum import Enum
+import django_filters as filters
+from django_filters.widgets import BooleanWidget
 
-from django_filters import rest_framework as filter
-from django_filters.filters import (AllValuesMultipleFilter, ModelChoiceFilter,
-                                    NumberFilter)
-
-from users.models import User
-from .models import Recipe
+from .models import Ingredient, Recipe
 
 
-class IsFavorited(Enum):
-    IN = 1
-    NOT_IN = 0
+class IngredientNameFilter(filters.FilterSet):
+    name = filters.CharFilter(field_name='name', lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name', 'measurement_unit')
 
 
-class IsInCart(Enum):
-    IN = 1
-    NOT_IN = 0
-
-
-class RecipeFilter(filter.FilterSet):
-    is_favorited = NumberFilter(method='get_is_favorited')
-    is_in_shopping_cart = NumberFilter(method='get_is_in_shopping_cart')
-    author = ModelChoiceFilter(queryset=User.objects.all())
-    tags = AllValuesMultipleFilter(field_name='tags__slug')
+class RecipeFilter(filters.FilterSet):
+    tags = filters.AllValuesMultipleFilter(
+        field_name='tags__slug'
+    )
+    is_favorited = filters.BooleanFilter(
+        method='get_favorite',
+        widget=BooleanWidget
+    )
+    is_in_shopping_cart = filters.BooleanFilter(
+        method='get_is_in_shopping_cart',
+        widget=BooleanWidget
+    )
 
     class Meta:
         model = Recipe
         fields = ('is_favorited', 'is_in_shopping_cart', 'author', 'tags')
 
-    def get_is_favorited(self, queryset, name, value):
+    def get_favorite(self, queryset, name, value):
         user = self.request.user
-        if value == IsFavorited.IN.value and user.is_authenticated:
-            return queryset.filter(favorites__user=user)
-        return queryset
+        if value:
+            return Recipe.objects.filter(in_favorites__user=user)
+        return Recipe.objects.all()
 
     def get_is_in_shopping_cart(self, queryset, name, value):
         user = self.request.user
-        if value == IsInCart.IN.value and user.is_authenticated:
-            return queryset.filter(shopping_cart__user=user)
-        return queryset
+        if value:
+            return Recipe.objects.filter(in_purchases__user=user)
+        return Recipe.objects.all()

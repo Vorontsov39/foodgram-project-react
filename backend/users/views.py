@@ -1,89 +1,130 @@
 from django.shortcuts import get_object_or_404
 from djoser.serializers import SetPasswordSerializer
-from rest_framework import mixins, status, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.serializers import ValidationError
 
-from .models import Subscription, User
-from .serializers import (CreateUserSerializer, SubscribeSerializer,
-                          UserSerializer)
+from .models import Follow, User
+from .pagination import LimitPageNumberPagination
+from .permissions import IsAdminOrReadOnly
+from .serializers import (CustomUserSerializer, FollowSerializer,
+                          UserCreateSerializer)
 
-SUBSCRIBE_EXIST = 'Вы уже подписаны на данного автора'
-SUBSCRIBE_NOT_EXIST = 'Вы не подписаны на данного автора'
-SUBSCRIBE_TO_MYSELF = 'Нельзя подписать на самого себя'
-
-
-class CreateListRetrieve(mixins.CreateModelMixin, mixins.ListModelMixin,
-                         mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """Класс для получения списка объектов, создания или получения объекта."""
-    pass
+ERROR_UNSUBSCRIBE = 'Вы не можете отписаться повторно!'
+ERROR_TWICE_SUBSCRIBE = 'Вы не можете подписаться повторно!'
+MYSELF = 'Самоподписка!'
 
 
-class UserViewSet(CreateListRetrieve):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = (IsAuthenticated,)
+    pagination_class = LimitPageNumberPagination
 
     def get_permissions(self):
-        if self.action == 'create' or self.action == 'list':
-            return (AllowAny(),)
-        return super().get_permissions()
+        if self.action in ['list', 'create', 'retrieve']:
+            permission_classes = [permissions.AllowAny]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrReadOnly]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         if self.action == 'create':
-            return CreateUserSerializer
+            return UserCreateSerializer
         if self.action == 'set_password':
             return SetPasswordSerializer
-        if self.action == 'subscribe' or self.action == 'subscriptions':
-            return SubscribeSerializer
-        return UserSerializer
+        if self.action in ['subscribe', 'subscriptions']:
+            return FollowSerializer
+        return CustomUserSerializer
 
-    @action(detail=False)
-    def me(self, request):
-        user = get_object_or_404(User, username=request.user.username)
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get('username')
+        email = serializer.validated_data.get('email')
+        first_name = serializer.validated_data.get('first_name')
+        last_name = serializer.validated_data.get('last_name')
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user.set_password(serializer.validated_data.get('password'))
+        user.save()
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(
+        methods=['GET'],
+        detail=False,
+        url_path='me',
+    )
+    def users_profile(self, request):
+        user = get_object_or_404(
+            User,
+            username=request.user.username
+        )
         serializer = self.get_serializer(user)
-        return Response(serializer.data)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
 
-    @action(methods=('POST',), detail=False)
+    @action(methods=['POST'], detail=False)
     def set_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.request.user.set_password(
-            serializer.validated_data['new_password'])
+            serializer.validated_data.get('new_password')
+        )
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=('POST', 'DELETE'), detail=False,
-            url_path=r'(?P<id>\d+)/subscribe')
+    @action(
+        detail=False,
+        methods=['POST', 'DELETE'],
+        url_path=r'(?P<id>\d+)/subscribe',
+    )
     def subscribe(self, request, id):
         user = request.user
         author = get_object_or_404(User, id=id)
         if user == author:
-            raise ValidationError(SUBSCRIBE_TO_MYSELF)
+            return Response(MYSELF, status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'DELETE':
-            object = Subscription.objects.filter(
+            follow = Follow.objects.filter(
                 author=author, user=user).first()
-            if object is None:
-                raise ValidationError(SUBSCRIBE_NOT_EXIST)
-            object.delete()
+            if follow is None:
+                return Response(
+                    ERROR_UNSUBSCRIBE,
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            follow.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        if Subscription.objects.filter(author=author, user=user).exists():
-            raise ValidationError(SUBSCRIBE_EXIST)
+        if Follow.objects.filter(author=author, user=user).exists():
+            return Response(
+                ERROR_TWICE_SUBSCRIBE,
+                status=status.HTTP_400_BAD_REQUEST
+            )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(user=user, author=author)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=False)
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_path='subscriptions'
+    )
     def subscriptions(self, request):
-        objects = Subscription.objects.filter(user=request.user)
-        if not objects:
-            return Response(status=status.HTTP_200_OK)
-        page = self.paginate_queryset(objects)
-        if page:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(objects, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        user = request.user
+        queryset = Follow.objects.filter(user=user)
+        pages = self.paginate_queryset(queryset)
+        serializer = FollowSerializer(
+            pages,
+            many=True,
+            context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)

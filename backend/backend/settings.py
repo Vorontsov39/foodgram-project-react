@@ -4,15 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-AUTH_USER_MODEL = 'users.User'
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SECRET_KEY = 'cwak08+*nc)%_v0%1)u(yg6z+!(r1r^z_#=ezn8^k39g6ggrm4'
+
+SECRET_KEY = os.getenv('SECRET_KEY', default='kekcheburek2345')
+
 
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -22,11 +24,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_filters',
     'rest_framework.authtoken',
+    'django_filters',
     'djoser',
-    'users.apps.UsersConfig',
-    'recipes.apps.RecipesConfig',
+    'users',
+    'recipes',
 ]
 
 MIDDLEWARE = [
@@ -39,7 +41,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'foodgram.urls'
+ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
     {
@@ -57,7 +59,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'foodgram.wsgi.application'
+WSGI_APPLICATION = 'backend.wsgi.application'
+
 
 DATABASES = {
     'default': {
@@ -66,7 +69,7 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT')
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
@@ -75,31 +78,41 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+            'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+            'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+            'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
+AUTH_USER_MODEL = 'users.User'
+
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'users.pagination.QueryPageSizePagination',
-    'SEARCH_PARAM': 'name'
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
 }
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
 }
 
+
 LANGUAGE_CODE = 'ru'
 
-TIME_ZONE = 'Europe/Moscow'
+TIME_ZONE = 'Asia/Novosibirsk'
 
 USE_I18N = True
 
@@ -107,8 +120,9 @@ USE_L10N = True
 
 USE_TZ = True
 
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
