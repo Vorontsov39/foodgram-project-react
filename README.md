@@ -2,88 +2,77 @@
 
 ##  Приложение «Продуктовый помощник».
 
-Сайт, на котором пользователи могут публиковать рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов, создавать список продуктов, которые нужно купить для приготовления выбранных блюд.
-
-Реализовал backend и API для взаимодействия с ним, настроил контейнеризацию готового проекта в Docker-контейнерах. В проекте был готовый фронтенд, одностраничное приложение на фреймворке React, которое взаимодействует с API через удобный пользовательский интерфейс. 
-
+На сайте пользователи могут разместить рецепт, подписаться на пользователя и просто просматривать рецепты.
+При регистрации пользователь указывает свой email, который будет использоваться при авторизации.
 Проект реализован на Django REST Framework.
 
 ## Как локально запустить проект:
 
-Клонировать репозиторий и перейти в него в командной строке:
+Клонировать репозиторий и перейти в папку /infra/:
 
 ```
-git clone git@github.com:Saladin366/foodgram-project-react.git
-```
-
-```
-cd foodgram-project-react
-```
-
-Cоздать и активировать виртуальное окружение:
-
-```
-python -m venv venv
-```
-
-```
-source venv/Scripts/activate
-```
-
-или
-
-```
-source venv/bin/activate
-```
-
-Создать и заполнить файл .env с переменными окружения для settings.py:
-
-```
+git clone git@github.com:Vorontsov39/foodgram-project-react.git
 cd infra
 ```
 
-```
-touch .env
-```
-
-Создать и запустить контейнеры с проектом:
+Создайте файл .env командой touch .env и добавьте в него переменные окружения для работы с базой данных:
 
 ```
-docker-compose up -d --build
+SECRET_KEY=<ваш_django_секретный_ключ>
+DB_NAME=postgres # имя базы данных
+POSTGRES_USER=postgres # логин для подключения к базе данных
+POSTGRES_PASSWORD=postgres # пароль для подключения к БД (установите свой)
+DB_HOST=db # название сервиса (контейнера)
+DB_PORT=5432 # порт для подключения к БД
 ```
 
-Выполнить миграции:
+Вы можете сгенерировать DJANGO_SECRET_KEY. Из директории проекта /backend/ выполнить:
 
 ```
-docker-compose exec backend python manage.py migrate
+python manage.py shell
+from django.core.management.utils import get_random_secret_key  
+get_random_secret_key()
+
+Полученный ключ скопировать в файл .env.
 ```
 
-Создать суперпользователя:
+Скопируйте файлы docker-compose.yml, nginx.conf и .env из папки /infra/ на Ваш виртуальный сервер:
 
 ```
-docker-compose exec backend python manage.py createsuperuser
+scp <название файла> <username>@<server_ip>:/home/<username>/
 ```
 
-Собрать статику:
+Далее зайдите на виртуальный сервер и подготовьте его к работе с проектом:
 
 ```
-docker-compose exec backend python manage.py collectstatic --no-input
+sudo apt update
+sudo apt upgrade -y
+sudo apt install python3-pip python3-venv git -y
+sudo apt install curl
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh 
+sudo apt install docker-compose
+```
+Разворачиваем проект с помощью Docker используя контейнеризацию:
+
+
+```
+sudo docker-compose up -d --build
 ```
 
-Добавить данные в базу:
+
+Осталось выполнить миграции, подключить статику, создать профиль админастратора:
 
 ```
-docker-compose exec backend python add_data.py
+sudo docker exec -it <name или id контейнера backend> python manage.py migrate
+sudo docker exec -it <name или id контейнера backend> python manage.py collectstatic
+sudo docker exec -it <name или id контейнера backend> python manage.py createsuperuser
 ```
 
-Перейти по ссылке:
+И финально загрузить спискок ингридиентов:
 
-http://localhost/
-
-Документация к API:
-
-http://localhost/api/docs/
-
-Админ панель:
-
-http://localhost/admin/
+```
+sudo docker exec -it <name или id контейнера backend> python manage.py loadjson --path "recipes/data/ingredients.json"
+```
+Сайт доступен по адресу:
+http://51.250.92.99/

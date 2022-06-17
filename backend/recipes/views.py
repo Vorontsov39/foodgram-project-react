@@ -11,12 +11,12 @@ from .models import (Favorite, Ingredient, IngredientInRecipe, Purchase,
 from .permissions import AdminOrAuthorOrReadOnly
 from .serializers import (IngredientSerializer, RecipeCreateSerializer,
                           ShowRecipeSerializer, TagSerializer)
-from .utils import obj_create, obj_delete
+from .delsave import obj_create, obj_delete
 
-UNELECTED = 'Рецепта нет в избранном!'
+UNDETECTED = 'Рецепта нет в избранном!'
 ERROR_FAVORITE = 'Рецепт уже есть в избранном!'
-NOT_ON_THE_LIST = 'В списке нет рецепта, который хотите удалить!'
-ERROR_ON_THE_LIST = 'Рецепт уже есть в списке!'
+NOT_ON_LIST = 'В списке нет рецепта, который вы хотите удалить!'
+ERROR_ON_LIST = 'Рецепт уже в списке!'
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -59,7 +59,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             return obj_create(user, model, pk=pk, message=ERROR_FAVORITE)
         if request.method == 'DELETE':
-            return obj_delete(user, model, pk=pk, message=UNELECTED)
+            return obj_delete(user, model, pk=pk, message=UNDETECTED)
 
     @action(
         methods=['POST', 'DELETE'],
@@ -69,9 +69,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         model = Purchase
         if request.method == 'POST':
-            return obj_create(user, model, pk=pk, message=ERROR_ON_THE_LIST)
+            return obj_create(user, model, pk=pk, message=ERROR_ON_LIST)
         if request.method == 'DELETE':
-            return obj_delete(user, model, pk=pk, message=NOT_ON_THE_LIST)
+            return obj_delete(user, model, pk=pk, message=NOT_ON_LIST)
 
     @action(
         detail=False,

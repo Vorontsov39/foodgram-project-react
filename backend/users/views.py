@@ -6,8 +6,8 @@ from rest_framework.response import Response
 
 from .models import Follow, User
 from .pagination import LimitPageNumberPagination
-from .permissions import IsAdminOrReadOnly
-from .serializers import (CustomUserSerializer, FollowSerializer,
+from .permission import IsAdminOrReadOnly
+from .serializers import (CustomUserSerializer, SubscribeSerializer,
                           UserCreateSerializer)
 
 ERROR_UNSUBSCRIBE = 'Вы не можете отписаться повторно!'
@@ -34,7 +34,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'set_password':
             return SetPasswordSerializer
         if self.action in ['subscribe', 'subscriptions']:
-            return FollowSerializer
+            return SubscribeSerializer
         return CustomUserSerializer
 
     def create(self, request):
@@ -122,7 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         queryset = Follow.objects.filter(user=user)
         pages = self.paginate_queryset(queryset)
-        serializer = FollowSerializer(
+        serializer = SubscribeSerializer(
             pages,
             many=True,
             context={'request': request}

@@ -3,7 +3,7 @@ from drf_extra_fields.fields import Base64ImageField
 from recipes.models import Recipe
 from rest_framework import serializers
 
-from .models import Follow, User
+from .models import Subscribe, User
 
 
 class UserCreateSerializer(UserCreateSerializer):
@@ -51,12 +51,12 @@ class CustomUserSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
-        return user.is_authenticated and Follow.objects.filter(
+        return user.is_authenticated and Subscribe.objects.filter(
             author=obj, user=user
         ).exists()
 
 
-class FollowSerializer(serializers.ModelSerializer):
+class SubscribeSerializer(serializers.ModelSerializer):
     email = serializers.ReadOnlyField(source='author.email')
     id = serializers.ReadOnlyField(source='author.id')
     username = serializers.ReadOnlyField(source='author.username')
@@ -67,7 +67,7 @@ class FollowSerializer(serializers.ModelSerializer):
     recipes_count = serializers.SerializerMethodField()
 
     class Meta:
-        model = Follow
+        model = Subscribe
         fields = (
             'email',
             'id',
@@ -92,6 +92,6 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
-        return user.is_authenticated and Follow.objects.filter(
+        return user.is_authenticated and Subscribe.objects.filter(
             author=obj.author, user=user
         ).exists()
