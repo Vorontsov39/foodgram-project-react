@@ -76,3 +76,20 @@ sudo docker exec -it <name или id контейнера backend> python manage
 ```
 Сайт доступен по адресу:
 http://51.250.92.99/
+
+Админка доступна по адресу:
+http://51.250.92.99/admin
+
+Вход в панель администратора:
+login: Adm1
+password: qwerty
+
+Пользователи:
+login: 0@mail.ru
+password: Anton@1987
+
+login: User1@mail.ru
+password: Anton@1987
+
+login: User2@mail.ru
+password: Anton@1987
