@@ -4,7 +4,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Follow, User
+from .models import Subscribe, User
 from .pagination import LimitPageNumberPagination
 from .permission import IsAdminOrReadOnly
 from .serializers import (CustomUserSerializer, SubscribeSerializer,
@@ -94,7 +94,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if user == author:
             return Response(MYSELF, status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'DELETE':
-            follow = Follow.objects.filter(
+            follow = Subscribe.objects.filter(
                 author=author, user=user).first()
             if follow is None:
                 return Response(
@@ -103,7 +103,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 )
             follow.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        if Follow.objects.filter(author=author, user=user).exists():
+        if Subscribe.objects.filter(author=author, user=user).exists():
             return Response(
                 ERROR_TWICE_SUBSCRIBE,
                 status=status.HTTP_400_BAD_REQUEST
@@ -120,7 +120,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        queryset = Follow.objects.filter(user=user)
+        queryset = Subscribe.objects.filter(user=user)
         pages = self.paginate_queryset(queryset)
         serializer = SubscribeSerializer(
             pages,
