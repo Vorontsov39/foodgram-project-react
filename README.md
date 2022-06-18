@@ -72,7 +72,7 @@ sudo docker exec -it <name или id контейнера backend> python manage
 И финально загрузить спискок ингридиентов:
 
 ```
-sudo docker exec -it <name или id контейнера backend> python manage.py loadjson --path "recipes/data/ingredients.json"
+sudo docker-compose exec backend python manage.py loadjson --path 'recipes/data/ingredients.json'
 ```
 Сайт доступен по адресу:
 http://51.250.92.99/
